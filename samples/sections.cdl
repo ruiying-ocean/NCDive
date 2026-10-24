@@ -1,0 +1,48 @@
+netcdf sections {
+dimensions:
+    lat = 2 ;
+    lon = 3 ;
+    z = 3 ;
+    pressure = 3 ;
+    sigma = 3 ;
+    nv = 2 ;
+variables:
+    double lat(lat) ;
+        lat:units = "degrees_north" ;
+    double lon(lon) ;
+        lon:units = "degrees_east" ;
+    double z(z) ;
+        z:units = "m" ;
+        z:axis = "Z" ;
+        z:positive = "up" ;
+        z:long_name = "Height" ;
+        z:bounds = "z_bounds" ;
+    double z_bounds(z, nv) ;
+    double pressure(pressure) ;
+        pressure:units = "hPa" ;
+        pressure:standard_name = "air_pressure" ;
+        pressure:bounds = "pressure_bounds" ;
+    double pressure_bounds(pressure, nv) ;
+    double sigma(sigma) ;
+        sigma:units = "1" ;
+        sigma:axis = "Z" ;
+        sigma:formula_terms = "sigma: sigma" ;
+    double height_field(z, lat, lon) ;
+        height_field:units = "K" ;
+    double pressure_field(pressure, lat, lon) ;
+        pressure_field:units = "K" ;
+    double sigma_field(sigma, lat, lon) ;
+        sigma_field:units = "K" ;
+    :description = "Synthetic vertical-coordinate tests; not observations." ;
+data:
+    lat = -45, 45 ;
+    lon = -120, 0, 120 ;
+    z = -1000, -100, 0 ;
+    z_bounds = -1500, -550, -550, -50, -50, 50 ;
+    pressure = 1000, 500, 100 ;
+    pressure_bounds = 1100, 750, 750, 300, 300, 50 ;
+    sigma = 0, 0.5, 1 ;
+    height_field = 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 ;
+    pressure_field = 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 ;
+    sigma_field = 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 ;
+}

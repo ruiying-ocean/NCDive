@@ -1,0 +1,26 @@
+netcdf groups {
+variables:
+    int value ;
+    :title = "Nested group example" ;
+data:
+    value = 1 ;
+
+group: ocean {
+    dimensions:
+        depth = 2 ;
+    variables:
+        float value(depth) ;
+            value:units = "m" ;
+        :description = "Ocean observations" ;
+    data:
+        value = 10, 20 ;
+
+    group: deep {
+        variables:
+            float value(depth) ;
+                value:units = "degC" ;
+        data:
+            value = 2, 3 ;
+    }
+}
+}

@@ -1,0 +1,18 @@
+[package]
+name = "ncdive"
+version = "0.1.0"
+edition = "2024"
+description = "A Rust desktop browser for NetCDF datasets"
+
+[dependencies]
+eframe = { version = "0.37", default-features = false, features = ["accesskit", "default_fonts", "glow", "wayland", "x11"] }
+netcdf = { version = "0.12", default-features = false }
+proj = { version = "0.31", default-features = false }
+rfd = "0.17"
+resvg = { version = "0.45.1", default-features = false, features = ["text"] }
+svg2pdf = { version = "0.13", default-features = false, features = ["text"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6.5"
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSApplication", "NSEvent", "NSMenu", "NSMenuItem", "NSResponder"] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSAppleEventDescriptor", "NSAppleEventManager", "NSNotification", "NSObject", "NSString", "NSURL"] }

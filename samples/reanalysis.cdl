@@ -1,0 +1,32 @@
+netcdf reanalysis {
+dimensions:
+    month = 1 ;
+    level = 3 ;
+    latitude = 3 ;
+    longitude = 4 ;
+variables:
+    int month(month) ;
+    int level(level) ;
+        level:units = "millibars" ;
+        level:long_name = "pressure_level" ;
+    float latitude(latitude) ;
+        latitude:units = "degrees_north" ;
+        latitude:_FillValue = NaNf ;
+    float longitude(longitude) ;
+        longitude:units = "degrees_east" ;
+        longitude:_FillValue = NaNf ;
+    short wind(month, level, latitude, longitude) ;
+        wind:units = "m s**-1" ;
+        wind:_FillValue = -32767s ;
+        wind:scale_factor = -0.25 ;
+        wind:add_offset = 2.0 ;
+    :description = "Synthetic ERA-Interim-style pressure and packed-wind data; not observations." ;
+data:
+    month = 1 ;
+    level = 850, 500, 200 ;
+    latitude = 90, 0, -90 ;
+    longitude = -180, -90, 0, 90 ;
+    wind = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+           12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+           24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35 ;
+}

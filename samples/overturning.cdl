@@ -1,0 +1,61 @@
+netcdf overturning {
+dimensions:
+    time = 2 ;
+    lat_moc = 5 ;
+    lat_bad = 5 ;
+    lat_cf = 5 ;
+    zt_moc = 3 ;
+    lon = 3 ;
+    lat_moc_edges = 6 ;
+    zt_moc_edges = 4 ;
+    nv = 2 ;
+variables:
+    double time(time) ;
+        time:units = "Year mid-point" ;
+    double lat_moc(lat_moc) ;
+        lat_moc:standard_name = "latitude" ;
+        lat_moc:units = "degrees_north" ;
+        lat_moc:edges = "lat_moc_edges" ;
+    double lat_moc_edges(lat_moc_edges) ;
+    double zt_moc(zt_moc) ;
+        zt_moc:standard_name = "depth" ;
+        zt_moc:units = "m" ;
+        zt_moc:positive = "down" ;
+        zt_moc:edges = "zt_moc_edges" ;
+    double zt_moc_edges(zt_moc_edges) ;
+    double lon(lon) ;
+        lon:units = "degrees_east" ;
+    double lat_bad(lat_bad) ;
+        lat_bad:units = "degrees_north" ;
+        lat_bad:edges = "lat_moc_edges" ;
+    double lat_cf(lat_cf) ;
+        lat_cf:units = "degrees_north" ;
+        lat_cf:bounds = "invalid_bounds" ;
+    double invalid_bounds(lat_cf, nv) ;
+    float phys_opsia(time, zt_moc, lat_moc) ;
+        phys_opsia:long_name = "Synthetic Atlantic streamfunction" ;
+        phys_opsia:standard_name = "ocean_meridional_overturning_streamfunction" ;
+        phys_opsia:units = "Sv" ;
+        phys_opsia:_FillValue = -999.f ;
+    float surface(lat_moc, lon) ;
+        surface:units = "K" ;
+    float zonal_section(zt_moc, lon) ;
+        zonal_section:units = "K" ;
+    float bad_edges(zt_moc, lat_bad) ;
+    float bad_cf_bounds(zt_moc, lat_cf) ;
+    :description = "Synthetic staggered cGENIE grid with pole samples and extrapolated outer edges." ;
+data:
+    time = 0.5, 9999.5 ;
+    lat_moc = -90, -45, 0, 45, 90 ;
+    lat_moc_edges = -112.5, -67.5, -22.5, 22.5, 67.5, 112.5 ;
+    zt_moc = 0, 1000, 5000 ;
+    zt_moc_edges = 0, 500, 3000, 5000 ;
+    lon = -120, 0, 120 ;
+    lat_bad = -85, -45, 0, 45, 85 ;
+    lat_cf = -90, -45, 0, 45, 90 ;
+    invalid_bounds = -112.5, -67.5, -67.5, -22.5, -22.5, 22.5, 22.5, 67.5, 67.5, 112.5 ;
+    phys_opsia = 0, 0, 0, 0, 0, -5, -2, 3, 15, -999, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, -4, -1, 4, 16, -999, 0, 0, 0, 0, 0 ;
+    surface = 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 ;
+    zonal_section = 1, 2, 3, 4, 5, 6, 7, 8, 9 ;
+}

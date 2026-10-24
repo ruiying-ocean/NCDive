@@ -1,0 +1,61 @@
+netcdf curvilinear {
+dimensions:
+    y = 2 ;
+    x = 3 ;
+    time = 2 ;
+    deptht = 2 ;
+    nv = 4 ;
+variables:
+    double nav_lon(y, x) ;
+        nav_lon:units = "degrees_east" ;
+    double nav_lat(y, x) ;
+        nav_lat:units = "degrees_north" ;
+    double bounded_lon(y, x) ;
+        bounded_lon:standard_name = "longitude" ;
+        bounded_lon:units = "degrees_east" ;
+        bounded_lon:bounds = "lon_bounds" ;
+    double bounded_lat(y, x) ;
+        bounded_lat:standard_name = "latitude" ;
+        bounded_lat:units = "degrees_north" ;
+        bounded_lat:bounds = "lat_bounds" ;
+    double lon_bounds(y, x, nv) ;
+    double lat_bounds(y, x, nv) ;
+    double time(time) ;
+        time:units = "days since 2000-01-01" ;
+        time:calendar = "noleap" ;
+    double deptht(deptht) ;
+        deptht:units = "m" ;
+        deptht:axis = "Z" ;
+        deptht:positive = "down" ;
+    short field(x, time, deptht, y) ;
+        field:coordinates = "time deptht nav_lon nav_lat" ;
+        field:units = "degC" ;
+        field:scale_factor = 0.5 ;
+        field:add_offset = 10.0 ;
+        field:_FillValue = -999s ;
+    float bounded(time, y, x) ;
+        bounded:coordinates = "time bounded_lon bounded_lat" ;
+        bounded:units = "degC" ;
+    float fallback(y, x) ;
+        fallback:units = "degC" ;
+data:
+    time = 0, 30 ;
+    deptht = 5, 100 ;
+    nav_lon = 174, -178, -170, 176, -176, -168 ;
+    nav_lat = -10, -8, -6, 10, 12, 14 ;
+    bounded_lon = 174, -178, -170, 176, -176, -168 ;
+    bounded_lat = -10, -8, -6, 10, 12, 14 ;
+    lon_bounds = 169.0, 177.0, 179.0, 171.0, 177.0, -175.0, -173.0, 179.0, -175.0, -167.0, -165.0, -173.0, 171.0, 179.0, -179.0, 173.0, 179.0, -173.0, -171.0, -179.0, -173.0, -165.0, -163.0, -171.0 ;
+    lat_bounds = -21.0, -19.0, 1.0, -1.0, -19.0, -17.0, 3.0, 1.0, -17.0, -15.0, 5.0, 3.0, -1.0, 1.0, 21.0, 19.0, 1.0, 3.0, 23.0, 21.0, 3.0, 5.0, 25.0, 23.0 ;
+    field = 0, 1, 2, 3, 4, -999, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 ;
+    bounded = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ;
+    fallback = 0, 1, 2, 3, 4, 5 ;
+group: ocean {
+    variables:
+        float field(y, x) ;
+            field:coordinates = "nav_lon nav_lat" ;
+            field:units = "degC" ;
+    data:
+        field = 1, 2, 3, 4, 5, 6 ;
+}
+}

@@ -1,0 +1,54 @@
+netcdf packed {
+dimensions:
+    lon = 3 ;
+    time = 2 ;
+    depth = 2 ;
+    lat = 2 ;
+    lat_edges = 3 ;
+    nv = 2 ;
+variables:
+    double lon(lon) ;
+        lon:units = "degrees_east" ;
+        lon:bounds = "lon_bounds" ;
+    double lon_bounds(lon, nv) ;
+    double lat(lat) ;
+        lat:units = "degrees_north" ;
+        lat:edges = "lat_edges" ;
+    double lat_edges(lat_edges) ;
+    double time(time) ;
+        time:units = "days since 2000-01-01" ;
+        time:calendar = "360_day" ;
+    double depth(depth) ;
+        depth:units = "m" ;
+        depth:positive = "down" ;
+        depth:bounds = "depth_bounds" ;
+    double depth_bounds(depth, nv) ;
+    short packed(lon, time, depth, lat) ;
+        packed:units = "degC" ;
+        packed:_FillValue = -32767s ;
+        packed:missing_value = -999s ;
+        packed:valid_range = 0s, 500s ;
+        packed:scale_factor = 0.5 ;
+        packed:add_offset = 10.0 ;
+    float constant(lat, lon) ;
+    float empty(lat, lon) ;
+data:
+    lon = -240, -120, 0 ;
+    lon_bounds = -300, -180, -180, -60, -60, 60 ;
+    lat = 30, -30 ;
+    lat_edges = 90, 0, -90 ;
+    time = 0, 30 ;
+    depth = 5, 100 ;
+    depth_bounds = 0, 50, 50, 150 ;
+    packed = 0, _, 2, 3, 4, 5, 6, 7,
+             8, -999, 10, 11, 12, 13, 14, 15,
+             1000, 17, 18, 19, 20, 21, 22, 23 ;
+    constant = 7, 7, 7, 7, 7, 7 ;
+    empty = _, _, _, _, _, _ ;
+group: ocean {
+    variables:
+        float field(lat, lon) ;
+    data:
+        field = 1, 2, 3, 4, 5, 6 ;
+}
+}
