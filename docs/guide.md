@@ -73,6 +73,8 @@ cargo run --release -- samples/temperature.nc
 
 Run `cargo run --release` without a file to start with an empty window. Drag a NetCDF file into the Explore window, or use **File → Open NetCDF file…** or **Cmd+O** (**Ctrl+O** on other platforms) to choose a file. Drop one file at a time; you can also drop another file to replace the current dataset once loading finishes. Select a variable in the sidebar to see its details, or **Dataset overview** for global and group metadata.
 
+On macOS, **Cmd+W** (**File → Close Window**) closes the window, just like its red close button. **Cmd+Q** quits the app.
+
 Use optimized release builds for everyday viewing, especially large NEMO grids. Desktop app bundles should use the executable from `cargo build --release` at `target/release/ncdive`.
 
 On macOS, package the release executable as `NCDive.app/Contents/MacOS/ncdive` with `macos/Info.plist` copied to `NCDive.app/Contents/Info.plist`. The bundle supports opening `.nc`, `.nc4` and `.cdf` datasets directly from Finder, including when the app is already running. Install it in `~/Applications`, then choose it under a NetCDF file's **Get Info → Open with → Change All…** to make it the default. Open one dataset at a time.

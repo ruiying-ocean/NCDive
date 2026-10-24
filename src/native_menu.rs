@@ -185,6 +185,17 @@ impl FileMenu {
             item
         });
         menu.addItem(&items[0]);
+        // SAFETY: AppKit routes this standard action through the active window's responder chain.
+        let close = unsafe {
+            NSMenuItem::initWithTitle_action_keyEquivalent(
+                NSMenuItem::alloc(mtm),
+                ns_string!("Close Window"),
+                Some(sel!(performClose:)),
+                ns_string!("w"),
+            )
+        };
+        close.setKeyEquivalentModifierMask(NSEventModifierFlags::Command);
+        menu.addItem(&close);
         menu.addItem(&NSMenuItem::separatorItem(mtm));
         menu.addItem(&items[1]);
         menu.addItem(&items[2]);
@@ -192,7 +203,7 @@ impl FileMenu {
         root.setTitle(ns_string!("File"));
         root.setSubmenu(Some(&menu));
         main.addItem(&root);
-        debug_assert_eq!(menu.numberOfItems(), 4);
+        debug_assert_eq!(menu.numberOfItems(), 5);
         Self {
             main,
             root,
