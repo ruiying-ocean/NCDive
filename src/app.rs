@@ -32,10 +32,7 @@ impl NcDiveApp {
         initial_file: Option<PathBuf>,
         #[cfg(target_os = "macos")] native_events: crate::native_menu::NativeEvents,
     ) -> Self {
-        let mut visuals = egui::Visuals::light();
-        visuals.selection.bg_fill = Color32::from_rgb(209, 235, 237);
-        visuals.selection.stroke = egui::Stroke::new(1.0, ACCENT);
-        cc.egui_ctx.set_visuals(visuals);
+        cc.egui_ctx.set_visuals(visuals());
         crate::typography::configure(&cc.egui_ctx);
         let mut app = Self {
             #[cfg(target_os = "macos")]
@@ -265,44 +262,57 @@ impl eframe::App for NcDiveApp {
                             .desired_width(f32::INFINITY),
                     );
                     ui.add_space(12.0);
-                    if ui
-                        .selectable_label(self.selected.is_none(), "Dataset overview")
-                        .clicked()
-                    {
+                    if list_row(ui, "Dataset overview", None, self.selected.is_none()).clicked() {
                         self.selected = None;
                     }
                     ui.separator();
                     let query = self.search.to_lowercase();
+                    let (coordinates, data): (Vec<_>, Vec<_>) = dataset
+                        .variables
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, variable)| {
+                            variable.path.to_lowercase().contains(&query)
+                                || variable
+                                    .attribute("long_name")
+                                    .unwrap_or("")
+                                    .to_lowercase()
+                                    .contains(&query)
+                        })
+                        .partition(|(_, variable)| variable.coordinate);
                     egui::ScrollArea::vertical()
                         .id_salt("variable_list")
                         .show(ui, |ui| {
-                            let mut matches = 0;
-                            for (index, variable) in dataset.variables.iter().enumerate() {
-                                if !variable.path.to_lowercase().contains(&query)
-                                    && !variable
-                                        .attribute("long_name")
-                                        .unwrap_or("")
-                                        .to_lowercase()
-                                        .contains(&query)
-                                {
-                                    continue;
-                                }
-                                matches += 1;
-                                if ui
-                                    .add_sized(
-                                        [ui.available_width(), 30.0],
-                                        egui::Button::new(&variable.path)
-                                            .selected(self.selected == Some(index)),
-                                    )
-                                    .on_hover_text(
-                                        variable.attribute("long_name").unwrap_or(&variable.path),
-                                    )
-                                    .clicked()
-                                {
-                                    self.selected = Some(index);
-                                }
+                            let mut rows =
+                                |ui: &mut egui::Ui, variables: &[(usize, &VariableInfo)]| {
+                                    for &(index, variable) in variables {
+                                        let long_name = variable.attribute("long_name");
+                                        if list_row(
+                                            ui,
+                                            &variable.path,
+                                            long_name,
+                                            self.selected == Some(index),
+                                        )
+                                        .on_hover_text(long_name.unwrap_or(&variable.path))
+                                        .clicked()
+                                        {
+                                            self.selected = Some(index);
+                                        }
+                                    }
+                                };
+                            rows(ui, &data);
+                            if !coordinates.is_empty() {
+                                ui.add_space(6.0);
+                                egui::CollapsingHeader::new(format!(
+                                    "Coordinates ({})",
+                                    coordinates.len()
+                                ))
+                                .id_salt("coordinates")
+                                .default_open(data.is_empty())
+                                .open((!query.is_empty()).then_some(true))
+                                .show(ui, |ui| rows(ui, &coordinates));
                             }
-                            if matches == 0 {
+                            if data.is_empty() && coordinates.is_empty() {
                                 ui.label(if dataset.variables.is_empty() {
                                     "This dataset has no variables."
                                 } else {
@@ -378,6 +388,95 @@ impl eframe::App for NcDiveApp {
             self.open(path);
         }
     }
+}
+
+fn visuals() -> egui::Visuals {
+    let mut visuals = egui::Visuals::light();
+    let tint = Color32::from_rgb(209, 235, 237);
+    let hover = Color32::from_rgb(237, 246, 247);
+    visuals.selection.bg_fill = tint;
+    visuals.selection.stroke = egui::Stroke::new(1.0, ACCENT);
+    let widgets = &mut visuals.widgets;
+    // Separators and grid lines.
+    widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0, Color32::from_gray(225));
+    // Light controls with a thin border, so text fields stay visible on light panels.
+    widgets.inactive.weak_bg_fill = Color32::from_gray(247);
+    widgets.inactive.bg_fill = Color32::from_gray(232);
+    widgets.inactive.bg_stroke = egui::Stroke::new(1.0, Color32::from_gray(212));
+    for (state, fill) in [(&mut widgets.hovered, hover), (&mut widgets.active, tint)] {
+        state.weak_bg_fill = fill;
+        state.bg_fill = fill;
+        state.bg_stroke = egui::Stroke::new(1.0, ACCENT);
+        state.fg_stroke = egui::Stroke::new(1.0, Color32::from_gray(20));
+    }
+    widgets.open.weak_bg_fill = hover;
+    widgets.open.bg_stroke = egui::Stroke::new(1.0, ACCENT);
+    visuals
+}
+
+const LABEL_WIDTH: f32 = 96.0;
+
+/// A small teal heading that groups the controls below it.
+pub(crate) fn section(ui: &mut egui::Ui, title: &str) {
+    ui.add_space(12.0);
+    ui.label(RichText::new(title).small().strong().color(ACCENT));
+    ui.add_space(2.0);
+}
+
+/// One control row with its label in a fixed-width column, so rows line up across sections.
+/// The label's id lets controls name themselves for screen readers via `labelled_by`.
+pub(crate) fn field<R>(
+    ui: &mut egui::Ui,
+    label: &str,
+    add_contents: impl FnOnce(&mut egui::Ui, egui::Id) -> R,
+) -> R {
+    ui.horizontal_wrapped(|ui| {
+        let label = ui.label(RichText::new(label).color(ui.visuals().weak_text_color()));
+        ui.add_space((LABEL_WIDTH - label.rect.width()).max(0.0));
+        add_contents(ui, label.id)
+    })
+    .inner
+}
+
+pub(crate) fn primary_button(text: &str) -> egui::Button<'_> {
+    egui::Button::new(RichText::new(text).color(Color32::WHITE)).fill(ACCENT)
+}
+
+/// A full-width, left-aligned sidebar row: a title and an optional muted second line.
+fn list_row(
+    ui: &mut egui::Ui,
+    title: &str,
+    subtitle: Option<&str>,
+    selected: bool,
+) -> egui::Response {
+    let width = ui.available_width();
+    let mut job = egui::text::LayoutJob::default();
+    let style = ui.style();
+    job.append(
+        title,
+        0.0,
+        egui::TextFormat::simple(egui::TextStyle::Body.resolve(style), Color32::PLACEHOLDER),
+    );
+    if let Some(subtitle) = subtitle {
+        job.append(
+            &format!("\n{subtitle}"),
+            0.0,
+            egui::TextFormat::simple(
+                egui::TextStyle::Small.resolve(style),
+                ui.visuals().weak_text_color(),
+            ),
+        );
+    }
+    job.wrap = egui::text::TextWrapping {
+        max_width: width - 2.0 * ui.spacing().button_padding.x,
+        max_rows: 2,
+        ..Default::default()
+    };
+    let galley = ui.ctx().fonts_mut(|fonts| fonts.layout_job(job));
+    ui.add(
+        egui::Button::selectable(selected, (galley, egui::Atom::grow()))
+            .min_size(egui::vec2(width, 30.0)),
+    )
 }
 
 fn dataset_details(ui: &mut egui::Ui, dataset: &Dataset) {

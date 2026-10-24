@@ -22,6 +22,8 @@ pub struct VariableInfo {
     pub data_type: String,
     pub dimensions: Vec<DimensionInfo>,
     pub attributes: Vec<AttributeInfo>,
+    /// A CF coordinate, auxiliary coordinate or cell-bounds variable rather than data.
+    pub coordinate: bool,
 }
 
 #[derive(Debug)]
@@ -107,7 +109,7 @@ fn read_variables<'a>(
     group: &str,
     variables: impl Iterator<Item = netcdf::Variable<'a>>,
 ) -> Vec<VariableInfo> {
-    variables
+    let mut variables: Vec<_> = variables
         .map(|variable| VariableInfo {
             path: format!("{}/{}", group.trim_end_matches('/'), variable.name()),
             data_type: match variable.vartype() {
@@ -122,8 +124,21 @@ fn read_variables<'a>(
             },
             dimensions: variable.dimensions().iter().map(read_dimension).collect(),
             attributes: read_attributes(variable.attributes()),
+            coordinate: false,
         })
-        .collect()
+        .collect();
+    let referenced: Vec<String> = variables
+        .iter()
+        .flat_map(|v| ["coordinates", "bounds", "climatology"].map(|name| v.attribute(name)))
+        .flatten()
+        .flat_map(|names| names.split_whitespace().map(str::to_owned))
+        .collect();
+    for variable in &mut variables {
+        let name = variable.path.rsplit('/').next().unwrap_or_default();
+        variable.coordinate = matches!(variable.dimensions.as_slice(), [d] if d.name == name)
+            || referenced.iter().any(|r| r == name);
+    }
+    variables
 }
 
 fn read_attributes<'a>(
@@ -211,6 +226,28 @@ mod tests {
             dataset.groups[1].attributes[0].value.as_deref(),
             Ok("Ocean observations")
         );
+    }
+
+    #[test]
+    fn flags_coordinate_and_bounds_variables() {
+        for (name, coordinates) in [
+            (
+                "packed.nc",
+                "lat lat_edges lon lon_bounds time depth depth_bounds",
+            ),
+            (
+                "curvilinear.nc",
+                "nav_lon nav_lat bounded_lon bounded_lat lon_bounds lat_bounds time deptht",
+            ),
+        ] {
+            let dataset = Dataset::load(&sample(name)).unwrap();
+            for variable in &dataset.variables {
+                let expected = coordinates
+                    .split(' ')
+                    .any(|c| variable.path == format!("/{c}"));
+                assert_eq!(variable.coordinate, expected, "{name}: {}", variable.path);
+            }
+        }
     }
 
     #[test]

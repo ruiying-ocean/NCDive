@@ -5,9 +5,10 @@ use std::{
     time::Duration,
 };
 
-use eframe::egui::{self, Align2, Color32, FontId, Pos2, Rect, Shape, Stroke, Vec2};
+use eframe::egui::{self, Align2, Color32, FontId, Pos2, Rect, RichText, Shape, Stroke, Vec2};
 
 use crate::{
+    app::{field, primary_button, section},
     colour::{ColourScale, MISSING, NON_POSITIVE, Palette},
     dataset::{Dataset, VariableInfo},
     grid::{GeoPolygon, contains},
@@ -179,25 +180,29 @@ impl MapPanel {
             self.load(true);
         }
         let previous_kind = self.kind;
-        egui::ComboBox::from_label("View")
-            .selected_text(self.kind.name())
-            .show_ui(ui, |ui| {
-                for kind in PlotKind::ALL {
-                    ui.selectable_value(&mut self.kind, kind, kind.name());
-                }
-            });
+        section(ui, "DATA");
+        field(ui, "View", |ui, label| {
+            egui::ComboBox::from_id_salt("plot-kind")
+                .selected_text(self.kind.name())
+                .show_ui(ui, |ui| {
+                    for kind in PlotKind::ALL {
+                        ui.selectable_value(&mut self.kind, kind, kind.name());
+                    }
+                })
+                .response
+                .labelled_by(label);
+        });
         if self.kind != previous_kind {
             self.view = None;
             self.load(false);
         }
-        ui.horizontal_wrapped(|ui| {
-            ui.label("Missing values");
+        field(ui, "Missing values", |ui, label| {
             let input = ui.add(
                 egui::TextEdit::singleline(&mut self.missing_text)
                     .hint_text("e.g. -1e35, -9999")
                     .desired_width(210.0),
-            ).on_hover_text("Extra values to treat as missing, separated by commas or spaces. Use stored values, before scaling. Add 0 only when zero means missing. Applies to both inputs in a comparison.");
-            if ui.button("Apply").clicked()
+            ).labelled_by(label).on_hover_text("Extra values to treat as missing, separated by commas or spaces. Use stored values, before scaling. Add 0 only when zero means missing. Applies to both inputs in a comparison.");
+            if ui.add(primary_button("Apply")).clicked()
                 || (input.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)))
             {
                 match parse_missing_values(&self.missing_text) {
@@ -262,7 +267,7 @@ impl MapPanel {
         }
         let mut reference_changed = false;
         let mut remove_reference = false;
-        ui.horizontal_wrapped(|ui| {
+        field(ui, "Compare", |ui, _| {
             if ui.add_enabled(self.reference_loading.is_none(), egui::Button::new("Reference file…"))
                 .on_hover_text("Subtract a variable from another file, or choose this file to compare two slices.")
                 .clicked()
@@ -274,9 +279,19 @@ impl MapPanel {
                     Err(error) => self.reference_error = Some(format!("Could not open reference: {error}")),
                 }
             }
-            if self.reference_loading.is_some() { ui.spinner(); ui.label("Opening reference…"); }
+            if self.reference_loading.is_some() {
+                ui.spinner();
+                ui.label("Opening reference…");
+            }
             if let Some(reference) = &mut self.reference {
-                ui.label(reference.dataset.path.file_name().unwrap_or_default().to_string_lossy());
+                ui.label(
+                    reference
+                        .dataset
+                        .path
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy(),
+                );
                 let old_variable = reference.variable;
                 egui::ComboBox::from_id_salt("reference-variable")
                     .selected_text(&reference.dataset.variables[reference.variable].path)
@@ -287,7 +302,12 @@ impl MapPanel {
                         }
                     });
                 if reference.variable != old_variable {
-                    reference.indices = vec![0; reference.dataset.variables[reference.variable].dimensions.len()];
+                    reference.indices = vec![
+                        0;
+                        reference.dataset.variables[reference.variable]
+                            .dimensions
+                            .len()
+                    ];
                     reference_changed = true;
                 }
                 remove_reference = ui.button("Remove comparison").clicked();
@@ -373,14 +393,25 @@ impl MapPanel {
         } else if let Some(view) = &mut self.view {
             if self.kind == PlotKind::Map {
                 let previous = self.projection;
-                ui.horizontal_wrapped(|ui| {
-                    egui::ComboBox::from_label("Projection").selected_text(self.projection.name()).show_ui(ui, |ui| {
-                        for projection in Projection::ALL { ui.selectable_value(&mut self.projection, projection, projection.name()); }
-                    });
+                section(ui, "MAP");
+                field(ui, "Projection", |ui, label| {
+                    egui::ComboBox::from_id_salt("projection")
+                        .selected_text(self.projection.name())
+                        .show_ui(ui, |ui| {
+                            for projection in Projection::ALL {
+                                ui.selectable_value(
+                                    &mut self.projection,
+                                    projection,
+                                    projection.name(),
+                                );
+                            }
+                        })
+                        .response
+                        .labelled_by(label);
                     ui.checkbox(&mut self.coastlines, "Modern coastlines")
                         .on_hover_text("Present-day Natural Earth coastlines. Leave off when they do not match the model's geography.");
                 });
-                ui.small(self.projection.description());
+                field(ui, "", |ui, _| ui.small(self.projection.description()));
                 if self.projection != previous {
                     view.projector = Projector::new(self.projection);
                     view.mesh = None;
@@ -410,19 +441,16 @@ fn parse_missing_values(input: &str) -> Result<Vec<f64>, String> {
 fn selectors(ui: &mut egui::Ui, selectors: &[Selector], indices: &mut [usize]) -> bool {
     let mut changed = false;
     for selector in selectors {
-        ui.horizontal_wrapped(|ui| {
+        field(ui, &selector.name, |ui, label| {
             if selector.length > 1 {
+                ui.spacing_mut().slider_width = 200.0;
                 changed |= ui
-                    .add(
-                        egui::Slider::new(
-                            &mut indices[selector.dimension],
-                            0..=selector.length - 1,
-                        )
-                        .text(&selector.name),
-                    )
+                    .add(egui::Slider::new(
+                        &mut indices[selector.dimension],
+                        0..=selector.length - 1,
+                    ))
+                    .labelled_by(label)
                     .changed();
-            } else {
-                ui.strong(&selector.name);
             }
             ui.label(&selector.label).on_hover_text(
                 "Coordinate value as stored in the file; calendar dates are not converted.",
@@ -445,22 +473,28 @@ impl MapView {
     }
 
     fn show(&mut self, ui: &mut egui::Ui, coastlines: bool, inspect_cells: &mut bool) {
-        ui.add_space(10.0);
-        ui.horizontal_wrapped(|ui| {
-            egui::ComboBox::from_label("Palette")
+        section(ui, "COLOUR");
+        field(ui, "Palette", |ui, label| {
+            egui::ComboBox::from_id_salt("palette")
                 .selected_text(self.scale.palette.name())
                 .show_ui(ui, |ui| {
                     for palette in Palette::ALL {
                         ui.selectable_value(&mut self.scale.palette, palette, palette.name());
                     }
-                });
+                })
+                .response
+                .labelled_by(label);
             let old_log = self.scale.logarithmic;
-            egui::ComboBox::from_label("Scale")
+            let scale_label =
+                ui.label(RichText::new("Scale").color(ui.visuals().weak_text_color()));
+            egui::ComboBox::from_id_salt("scale")
                 .selected_text(if old_log { "Log₁₀" } else { "Linear" })
                 .show_ui(ui, |ui| {
                     ui.selectable_value(&mut self.scale.logarithmic, false, "Linear");
                     ui.selectable_value(&mut self.scale.logarithmic, true, "Log₁₀");
-                });
+                })
+                .response
+                .labelled_by(scale_label.id);
             ui.checkbox(inspect_cells, "Inspect cells").on_hover_text(
                 "Show exact values by pointing at a cell or choosing its row and column.",
             );
@@ -469,17 +503,28 @@ impl MapView {
                     .auto_range(&self.data.values, self.data.reference.is_some());
             }
         });
-        ui.horizontal_wrapped(|ui| {
-            ui.strong("Colour limits");
+        field(ui, "Limits", |ui, _| {
             let speed = ((self.scale.limits[1] - self.scale.limits[0]).abs() / 100.0).max(1e-12);
             ui.label("Min");
-            ui.add(egui::DragValue::new(&mut self.scale.limits[0]).speed(speed).max_decimals(12));
+            ui.add(
+                egui::DragValue::new(&mut self.scale.limits[0])
+                    .speed(speed)
+                    .max_decimals(12),
+            );
             ui.label("Max");
-            ui.add(egui::DragValue::new(&mut self.scale.limits[1]).speed(speed).max_decimals(12));
-            if ui.button("Auto range").on_hover_text("Fit this slice. Differences use limits centred on zero; log scales use positive values.").clicked() {
+            ui.add(
+                egui::DragValue::new(&mut self.scale.limits[1])
+                    .speed(speed)
+                    .max_decimals(12),
+            );
+            ui.label(if self.data.units.is_empty() {
+                "Units not specified"
+            } else {
+                &self.data.units
+            });
+            if ui.add(primary_button("Auto range")).on_hover_text("Fit this slice. Differences use limits centred on zero; log scales use positive values.").clicked() {
                 self.scale.auto_range(&self.data.values, self.data.reference.is_some());
             }
-            ui.label(if self.data.units.is_empty() { "Units not specified" } else { &self.data.units });
         });
         if let Err(error) = self.scale.validate() {
             ui.colored_label(Color32::DARK_RED, error);
@@ -490,7 +535,9 @@ impl MapView {
             ui.small(format!("Current: {}", self.data.source));
             ui.small(format!("Reference: {reference}"));
         }
-        ui.small(format!("{} · no smoothing", self.scale.name()));
+        field(ui, "", |ui, _| {
+            ui.small(format!("{} · no smoothing", self.scale.name()))
+        });
         let projection = match &self.projector {
             Ok(p) => p,
             Err(error) => {
