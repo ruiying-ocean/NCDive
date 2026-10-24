@@ -9,6 +9,7 @@ mod map_data;
 #[cfg(target_os = "macos")]
 mod native_menu;
 mod projection;
+mod time;
 mod typography;
 
 fn main() -> eframe::Result {

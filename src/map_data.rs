@@ -62,6 +62,8 @@ pub struct Selector {
     pub name: String,
     pub length: usize,
     pub label: String,
+    /// The coordinate value and units as stored in the file.
+    pub stored: String,
 }
 
 #[derive(Clone, Debug)]
@@ -161,16 +163,26 @@ impl MapSlice {
                 if start[index] >= dimension.len() {
                     return Err("The selected slice is outside this variable.".into());
                 }
-                let mut label = format!("Index {} of {}", start[index] + 1, dimension.len());
+                let mut stored = format!("Index {} of {}", start[index] + 1, dimension.len());
+                let mut label = stored.clone();
                 if let Some((_, coordinate)) = relative_variable(&file, name, &dimension.name())
                     && coordinate.dimensions().len() == 1
                     && coordinate.len() == dimension.len()
                 {
                     let values = decoded(&coordinate, &[start[index]], &[1], &[])?;
                     let units = text(&coordinate, "units")?.unwrap_or_default();
-                    label = format!("{} {}", number(values[0]), units);
-                    if let Some(calendar) = text(&coordinate, "calendar")? {
+                    let calendar = text(&coordinate, "calendar")?;
+                    stored = format!("{} {}", number(values[0]), units);
+                    label = crate::time::format(values[0], &units, calendar.as_deref())
+                        .unwrap_or_else(|| stored.clone());
+                    // The default calendar goes unmentioned; others explain dates like 30 February.
+                    if let Some(calendar) = calendar.filter(|c| {
+                        !c.eq_ignore_ascii_case("standard") && !c.eq_ignore_ascii_case("gregorian")
+                    }) {
                         label.push_str(&format!(" · {calendar} calendar"));
+                    }
+                    if coordinate.attribute_value("climatology").is_some() {
+                        label.push_str(" · climatology");
                     }
                 }
                 selectors.push(Selector {
@@ -178,6 +190,7 @@ impl MapSlice {
                     name: dimension.name(),
                     length: dimension.len(),
                     label,
+                    stored,
                 });
             }
         }
@@ -972,7 +985,11 @@ mod tests {
                 .collect::<Vec<_>>(),
             [1, 2]
         );
-        assert!(map.selectors[0].label.contains("30 days"));
+        // Time is decoded with the file's noleap calendar; depth keeps its stored value.
+        assert!(map.selectors[0].label.starts_with("2000-01-31"));
+        assert!(map.selectors[0].label.contains("noleap"));
+        assert_eq!(map.selectors[0].stored, "30 days since 2000-01-01");
+        assert_eq!(map.selectors[1].label, map.selectors[1].stored);
         assert!(map.selectors[1].label.contains("5 m"));
         assert!(map.x.inferred_bounds);
         assert_eq!(
@@ -1153,7 +1170,11 @@ mod tests {
         assert!(data.values[0].is_nan());
         assert_eq!(data.values[1], 14.0);
         assert_eq!(data.valid_count, 5);
-        assert!(data.selectors.iter().any(|s| s.label.starts_with("0 days")));
+        assert!(
+            data.selectors
+                .iter()
+                .any(|s| s.stored.starts_with("0 days"))
+        );
         let data = MapSlice::load(
             &sample("temperature.nc"),
             "/temperature",
@@ -1183,7 +1204,9 @@ mod tests {
         assert_eq!(map.valid_count, 11);
         assert_eq!(map.range, Some([5.0, 28.0]));
         assert_eq!(map.y.bounds[0], [-90.0, -30.0]);
-        assert!(map.selectors[0].label.contains("30 days since 2000-01-01"));
+        assert_eq!(map.selectors[0].stored, "30 days since 2000-01-01");
+        // Thirty-day months: day 30 is 1 February.
+        assert!(map.selectors[0].label.starts_with("2000-02-01"));
         assert!(map.selectors[0].label.contains("360_day"));
     }
 

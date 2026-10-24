@@ -452,9 +452,8 @@ fn selectors(ui: &mut egui::Ui, selectors: &[Selector], indices: &mut [usize]) -
                     .labelled_by(label)
                     .changed();
             }
-            ui.label(&selector.label).on_hover_text(
-                "Coordinate value as stored in the file; calendar dates are not converted.",
-            );
+            ui.label(&selector.label)
+                .on_hover_text(format!("Stored value: {}", selector.stored));
         });
     }
     changed

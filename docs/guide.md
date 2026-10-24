@@ -46,7 +46,7 @@ Use **Reference file…** to select the field to subtract. You can choose anothe
 
 **File → Export PNG…** and **File → Export PDF…** export the displayed map or section without the application controls or hover highlight. PNG figures are 1200 pixels wide; PDFs preserve vector cells, lines and embedded text. Figures include palette/scale, units, full source paths, slice coordinates, comparison order, and missing/clipped-value notes. Export runs in the background and reports success or failure in the bottom status bar, even after you switch to another variable. On macOS, File is in the system menu bar at the top of the screen; other platforms use a menu inside the window. Export commands are enabled when a valid plot is selected. Source NetCDF files are never written.
 
-Time/depth labels show the coordinates and units stored in the file. Calendar dates are not converted; model time labels should not be assumed to be calendar years.
+Time labels are decoded to dates from the time coordinate's CF units (`seconds`, `minutes`, `hours` or `days since` a reference date) and its calendar: standard/Gregorian, proleptic Gregorian, Julian, noleap/365_day, all_leap/366_day or 360_day. Non-standard calendars and climatologies are named after the date. Units in months or years, other calendars and time-zone offsets are shown as stored. Depth and other labels show the stored coordinate and units; hover over any label to see its stored value.
 
 Supported map storage types are floating point and integers up to 32 bits. Projected input grids without geographic latitude/longitude arrays, unstructured or time-varying grids, `_Unsigned` packing, 64-bit integer fields, line plots, polar views, custom projection settings, contour lines and animations are not implemented yet. Other variables remain available in the metadata browser.
 
@@ -103,7 +103,7 @@ ncgen -k classic -o samples/reanalysis.nc samples/reanalysis.cdl
 ncgen -k netCDF-4 -o samples/curvilinear.nc samples/curvilinear.cdl
 ```
 
-The tests cover metadata, read-only behavior, invalid files, nested groups, slicing, packed values, missing/default-fill values, mismatched NaN fill-attribute types, pressure direction, reversed latitude, dimension order, explicit and inferred cell bounds, date-line wrapping, two-dimensional coordinates and CF corners, folded cells and duplicate halos, constant/all-missing maps, projection reference positions, inverse cell inspection, projected grid geometry, palettes and log scales, both section orientations, comparison validation, coastline date-line handling, and PNG/PDF rendering. Export checks write synthetic preview figures to `target/export-previews/`.
+The tests cover metadata, read-only behavior, CF calendar dates, invalid files, nested groups, slicing, packed values, missing/default-fill values, mismatched NaN fill-attribute types, pressure direction, reversed latitude, dimension order, explicit and inferred cell bounds, date-line wrapping, two-dimensional coordinates and CF corners, folded cells and duplicate halos, constant/all-missing maps, projection reference positions, inverse cell inspection, projected grid geometry, palettes and log scales, both section orientations, comparison validation, coastline date-line handling, and PNG/PDF rendering. Export checks write synthetic preview figures to `target/export-previews/`.
 
 
 To rerun the optional real NEMO check with the snapshot collection above:
