@@ -931,6 +931,14 @@ mod tests {
         assert_eq!(map.range, Some([0.0, 4.0]));
         assert!(map.values[2].is_nan());
         let dataset = crate::dataset::Dataset::load(&path).unwrap();
+        assert!(
+            dataset
+                .variables
+                .iter()
+                .find(|v| v.path == "/zt")
+                .unwrap()
+                .coordinate
+        );
         assert_eq!(
             dataset
                 .variables
