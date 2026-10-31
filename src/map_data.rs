@@ -792,7 +792,10 @@ fn decoded(
 fn text(variable: &Variable<'_>, name: &str) -> Result<Option<String>> {
     variable
         .attribute_value(name)
-        .map(|value| String::try_from(value?).map_err(Into::into))
+        .map(|value| match value? {
+            AttributeValue::Strs(mut values) if values.len() == 1 => Ok(values.remove(0)),
+            value => String::try_from(value).map_err(Into::into),
+        })
         .transpose()
 }
 
@@ -861,6 +864,66 @@ mod tests {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("samples")
             .join(name)
+    }
+
+    #[test]
+    fn reads_netcdf4_string_attributes_on_a_veros_grid() {
+        let path =
+            std::env::temp_dir().join(format!("ncdive-string-attrs-{}.nc", std::process::id()));
+        let mut file = netcdf::create(&path).unwrap();
+        for (name, units, values) in [
+            ("xt", "degrees_east", vec![2.0, 6.0, 10.0]),
+            ("yt", "degrees_north", vec![-2.0, 2.0]),
+        ] {
+            file.add_dimension(name, values.len()).unwrap();
+            let mut coordinate = file.add_variable::<f64>(name, &[name]).unwrap();
+            coordinate.put_attribute("units", vec![units]).unwrap();
+            coordinate.put_values(&values, ..).unwrap();
+        }
+        file.add_variable::<f64>("zt", &[])
+            .unwrap()
+            .put_value(-35.0, ())
+            .unwrap();
+        let mut field = file
+            .add_variable::<f64>("zooplankton", &["yt", "xt"])
+            .unwrap();
+        for (name, value) in [
+            ("units", "mg C m-3"),
+            ("long_name", "Annual mean zooplankton carbon biomass"),
+            ("coordinates", "zt"),
+        ] {
+            field.put_attribute(name, vec![value]).unwrap();
+        }
+        field.put_attribute("_FillValue", f64::NAN).unwrap();
+        field
+            .put_values(&[0.0, 1.0, f64::NAN, 2.0, 3.0, 4.0], ..)
+            .unwrap();
+        file.close().unwrap();
+
+        assert_eq!(
+            MapSlice::suggested_kind(&path, "/zooplankton", PlotKind::LatitudeDepth).unwrap(),
+            PlotKind::Map
+        );
+        let map = MapSlice::load(&path, "/zooplankton", &[0, 0], PlotKind::Map, &[]).unwrap();
+        assert_eq!(map.shape, [2, 3]);
+        assert_eq!(map.x.centers, [2.0, 6.0, 10.0]);
+        assert_eq!(map.y.centers, [-2.0, 2.0]);
+        assert_eq!(map.units, "mg C m-3");
+        assert_eq!(map.title, "Annual mean zooplankton carbon biomass");
+        assert_eq!(map.valid_count, 5);
+        assert_eq!(map.range, Some([0.0, 4.0]));
+        assert!(map.values[2].is_nan());
+        let dataset = crate::dataset::Dataset::load(&path).unwrap();
+        assert_eq!(
+            dataset
+                .variables
+                .iter()
+                .find(|v| v.path == "/zooplankton")
+                .unwrap()
+                .attribute("units"),
+            Some("mg C m-3")
+        );
+        std::fs::remove_file(path).unwrap();
     }
 
     #[test]

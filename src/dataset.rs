@@ -143,6 +143,7 @@ fn read_attributes<'a>(
 fn format_attribute(value: AttributeValue) -> String {
     match value {
         AttributeValue::Str(value) => value,
+        AttributeValue::Strs(mut values) if values.len() == 1 => values.remove(0),
         AttributeValue::Strs(value) => format!("{value:?}"),
         AttributeValue::Uchar(value) => value.to_string(),
         AttributeValue::Uchars(value) => format!("{value:?}"),
