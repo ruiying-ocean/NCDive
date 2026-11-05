@@ -289,11 +289,11 @@ impl eframe::App for NcDiveApp {
                                         let long_name = variable.attribute("long_name");
                                         if list_row(
                                             ui,
-                                            &variable.path,
+                                            variable.name(),
                                             long_name,
                                             self.selected == Some(index),
                                         )
-                                        .on_hover_text(long_name.unwrap_or(&variable.path))
+                                        .on_hover_text(long_name.unwrap_or(variable.name()))
                                         .clicked()
                                         {
                                             self.selected = Some(index);
@@ -529,7 +529,7 @@ fn dataset_details(ui: &mut egui::Ui, dataset: &Dataset) {
 fn variable_header(ui: &mut egui::Ui, variable: &VariableInfo) {
     ui.label(RichText::new("VARIABLE").small().strong().color(ACCENT));
     ui.add_space(8.0);
-    ui.heading(&variable.path);
+    ui.heading(variable.name());
     if let Some(long_name) = variable.attribute("long_name") {
         ui.label(long_name);
     }

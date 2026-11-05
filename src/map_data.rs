@@ -212,7 +212,7 @@ impl MapSlice {
             cell_polygons,
             title: text(&variable, "long_name")?.unwrap_or_else(|| name.to_owned()),
             units: text(&variable, "units")?.unwrap_or_default(),
-            source: format!("{} · {name}", path.display()),
+            source: format!("{} · {}", path.display(), name.trim_start_matches('/')),
             reference: None,
             reference_selectors: Vec::new(),
             values,

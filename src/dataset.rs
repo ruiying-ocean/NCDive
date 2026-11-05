@@ -84,6 +84,11 @@ impl VariableInfo {
             .and_then(|attribute| attribute.value.as_deref().ok())
     }
 
+    /// Path without the root slash: "/NO3" shows as "NO3", grouped ones as "ocean/value".
+    pub fn name(&self) -> &str {
+        self.path.trim_start_matches('/')
+    }
+
     pub fn shape(&self) -> String {
         if self.dimensions.is_empty() {
             "Scalar".to_owned()
@@ -220,6 +225,8 @@ mod tests {
         assert_eq!(dataset.groups.len(), 3);
         let paths: Vec<_> = dataset.variables.iter().map(|v| v.path.as_str()).collect();
         assert_eq!(paths, ["/value", "/ocean/value", "/ocean/deep/value"]);
+        let names: Vec<_> = dataset.variables.iter().map(|v| v.name()).collect();
+        assert_eq!(names, ["value", "ocean/value", "ocean/deep/value"]);
         assert_eq!(dataset.variables[0].shape(), "Scalar");
         assert_eq!(dataset.variables[1].attribute("units"), Some("m"));
         assert_eq!(

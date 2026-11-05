@@ -294,11 +294,11 @@ impl MapPanel {
                 );
                 let old_variable = reference.variable;
                 egui::ComboBox::from_id_salt("reference-variable")
-                    .selected_text(&reference.dataset.variables[reference.variable].path)
+                    .selected_text(reference.dataset.variables[reference.variable].name())
                     .width(210.0)
                     .show_ui(ui, |ui| {
                         for (index, variable) in reference.dataset.variables.iter().enumerate() {
-                            ui.selectable_value(&mut reference.variable, index, &variable.path);
+                            ui.selectable_value(&mut reference.variable, index, variable.name());
                         }
                     });
                 if reference.variable != old_variable {
