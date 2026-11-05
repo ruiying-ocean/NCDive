@@ -1,6 +1,3 @@
-// Hide the extra console window on Windows release builds.
-#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
-
 mod app;
 mod coastlines;
 mod colour;
