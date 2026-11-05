@@ -3,6 +3,7 @@ name = "ncdive"
 version = "0.1.0"
 edition = "2024"
 description = "A Rust desktop browser for NetCDF datasets"
+license = "MIT"
 
 [dependencies]
 eframe = { version = "0.37", default-features = false, features = ["accesskit", "default_fonts", "glow", "wayland", "x11"] }
