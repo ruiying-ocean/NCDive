@@ -49,7 +49,9 @@ jobs:
           cp target/release/ncdive.exe "$dir/"
           # Windows loads DLLs from the exe's folder.
           # shortcut: copies every DLL in the env (larger zip); prune if size matters.
-          cp "$prefix"/Library/bin/*.dll "$prefix"/*.dll "$dir/"
+          # Two cp calls: both folders hold the same api-ms-win-*.dll names.
+          cp "$prefix"/*.dll "$dir/"
+          cp "$prefix"/Library/bin/*.dll "$dir/"
           7z a "target/release/$dir.zip" "$dir"
       - uses: actions/upload-artifact@v4
         with:
