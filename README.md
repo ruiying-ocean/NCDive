@@ -27,3 +27,7 @@ Open your own file with **File → Open NetCDF file…**, or drag it into the wi
 Tested on macOS; Windows and Linux builds are not yet verified.
 
 [Full guide](docs/guide.md) · [Build and packaging](docs/guide.md#run) · [Development checks](docs/guide.md#check)
+
+## License
+
+MIT. See [LICENSE](LICENSE). Bundled fonts and colour maps keep their own licenses in [assets](assets).

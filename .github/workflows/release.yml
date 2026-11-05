@@ -1,0 +1,35 @@
+# Builds the macOS download. Pushing a tag like v0.1.0 publishes it on the
+# Releases page; other runs keep it as a workflow artifact.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install netcdf proj pkg-config dylibbundler
+      - run: macos/package.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: target/release/NCDive-*.zip
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - run: gh release create "$GITHUB_REF_NAME" NCDive-*.zip --repo "$GITHUB_REPOSITORY" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
