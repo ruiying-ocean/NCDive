@@ -1,0 +1,69 @@
+# Builds macOS and Windows downloads. Pushing a tag like v0.1.0 publishes them
+# on the Releases page; other runs keep them as workflow artifacts.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+    branches: [release-builds] # testing only; remove before merging
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install netcdf proj pkg-config dylibbundler
+      - run: macos/package.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: target/release/NCDive-*.zip
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash -el {0} # login shell so the conda environment is active
+    steps:
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          activate-environment: ncdive
+      - run: conda install -y libnetcdf hdf5 proj pkg-config
+      - name: Build and zip
+        run: |
+          set -eu
+          prefix=$(cygpath -m "$CONDA_PREFIX") # C:/... works for bash and native tools
+          export NETCDF_DIR="$prefix/Library" HDF5_DIR="$prefix/Library"
+          export PKG_CONFIG_PATH="$prefix/Library/lib/pkgconfig"
+          cargo build --release
+
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
+          dir="NCDive-$version-windows-x64"
+          mkdir "$dir"
+          cp target/release/ncdive.exe "$dir/"
+          # Windows loads DLLs from the exe's folder.
+          # shortcut: copies every DLL in the env (larger zip); prune if size matters.
+          cp "$prefix"/Library/bin/*.dll "$prefix"/*.dll "$dir/"
+          7z a "target/release/$dir.zip" "$dir"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: target/release/NCDive-*.zip
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - run: gh release create "$GITHUB_REF_NAME" NCDive-*.zip --repo "$GITHUB_REPOSITORY" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
