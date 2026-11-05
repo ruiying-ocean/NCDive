@@ -432,7 +432,11 @@ fn geographic_axis(variable: &Variable<'_>) -> Result<Option<bool>> {
         .unwrap_or_default()
         .to_lowercase();
     let name = variable.name().to_lowercase();
-    let units = text(variable, "units")?.unwrap_or_default().to_lowercase();
+    // GLODAPv2 and other non-CF files write "degrees east" with a space.
+    let units = text(variable, "units")?
+        .unwrap_or_default()
+        .to_lowercase()
+        .replace(' ', "_");
     if units.contains("radian") || standard.starts_with("grid_") {
         return Ok(None);
     }
@@ -923,6 +927,31 @@ mod tests {
                 .attribute("units"),
             Some("mg C m-3")
         );
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn accepts_spaced_degree_units_like_glodap() {
+        let path = std::env::temp_dir().join(format!("ncdive-glodap-{}.nc", std::process::id()));
+        let mut file = netcdf::create(&path).unwrap();
+        for (name, units, values) in [
+            ("lon", "degrees east", vec![0.5, 1.5, 2.5]),
+            ("lat", "degrees north", vec![-0.5, 0.5]),
+        ] {
+            file.add_dimension(name, values.len()).unwrap();
+            let mut coordinate = file.add_variable::<f64>(name, &[name]).unwrap();
+            coordinate.put_attribute("units", vec![units]).unwrap();
+            coordinate.put_values(&values, ..).unwrap();
+        }
+        file.add_variable::<f64>("NO3", &["lat", "lon"])
+            .unwrap()
+            .put_values(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0], ..)
+            .unwrap();
+        file.close().unwrap();
+
+        let map = MapSlice::load(&path, "/NO3", &[0, 0], PlotKind::Map, &[]).unwrap();
+        assert_eq!(map.x.centers, [0.5, 1.5, 2.5]);
+        assert_eq!(map.y.centers, [-0.5, 0.5]);
         std::fs::remove_file(path).unwrap();
     }
 
